@@ -48,58 +48,85 @@ def main(cfg):
     out_writer = None
 
     tracker = SimpleTracker()
-    
+
     while True:
         ret, frame = cap.read()
         if not ret:
             print("Frame not received. Exiting...")
             break
-        # detection
-        results = det_model.predict(frame, imgsz=640, conf=0.25, verbose=False)[0]
+
+        # Initialize video writer when first frame arrives
+        if out_writer is None:
+            h, w = frame.shape[:2]
+            out_writer = cv2.VideoWriter("output_processed.mp4", fourcc, 30, (w, h))
+
+        # YOLO detection
+        results = det_model.predict(frame, imgsz=640, conf=0.3, verbose=False)[0]
         boxes = []
         for box in results.boxes:
             x1,y1,x2,y2 = map(int, box.xyxy[0].tolist())
             boxes.append((x1,y1,x2,y2))
+
+        # Depth estimation
         depth_classes = []
-        crops = [center_crop_around_bbox(frame, b, out_size=cfg['data']['input_size']) for b in boxes]
-        if len(crops)>0:
-            batch = torch.cat([preprocess_crop(c) for c in crops], dim=0).to(device)
+        crops = [center_crop_around_bbox(frame, b, cfg['data']['input_size']) for b in boxes]
+
+        if len(crops) > 0:
+            batch = torch.cat([preprocess_crop(c, cfg['data']['input_size']) for c in crops], dim=0).to(device)
+
             with torch.no_grad():
                 logits = depth(batch)  # [B,C,H,W]
                 probs = torch.softmax(logits, dim=1)
+
             for p in probs:
                 cls = aggregate_mask_prediction(p)
                 depth_classes.append(cls)
         else:
             depth_classes = []
 
-        tids, tbboxes = tracker.update(boxes)
+        # Tracking
+        tids, tracked_boxes  = tracker.update(boxes)
+
         # visualize: we must align classes with tracks - here we simply map by detection order (best-effort)
-        # Create lists same length as tbboxes
+        # Create lists same length as tracked_boxes
         # mapping naive: assume order maintained; better would be matching IDs to det indices
-        if len(tbboxes)>0 and len(depth_classes)>0:
+        if len(tracked_boxes)>0 and len(depth_classes)>0:
             # naive align
             # ensure same length
-            if len(depth_classes) < len(tbboxes):
-                depth_classes += [4]*(len(tbboxes)-len(depth_classes))
-            vis_classes = depth_classes[:len(tbboxes)]
+            if len(depth_classes) < len(tracked_boxes):
+                depth_classes += [4] * (len(tracked_boxes) - len(depth_classes))
+            vis_classes = depth_classes[:len(tracked_boxes)]
         else:
-            vis_classes = [4]*len(tbboxes)
-        out = visualize_overlay(frame, tbboxes, tids, vis_classes)
-        cv2.imshow("SAA", out)
+            vis_classes = [4] * len(tracked_boxes)
+        
+        # Draw
+        out_frame = visualize_overlay(frame.copy(), tracked_boxes, tids, vis_classes)
+        
+        # Save processed video
+        out_writer.write(out_frame)
+
+        # Display
+        cv2.imshow("SAA", out_frame)
+
         # Exit condition with ESC
         if cv2.waitKey(1) & 0xFF == 27:
             print("ESC pressed. Exiting...")
             break
-        # Exit condition when the window is closed
+        # Detect window close
         if cv2.getWindowProperty("SAA", cv2.WND_PROP_VISIBLE) < 1:
             print("Window closed. Exiting loop...")
             break
-    cap.release(); cv2.destroyAllWindows()
+
+    # Cleanup
+    cap.release()
+    if out_writer is not None:
+        out_writer.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--cfg", default="configs/default.yaml")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cfg", default="configs/default.yaml")
+    args = parser.parse_args()
+
     cfg = yaml.safe_load(open(args.cfg))
     main(cfg)
