@@ -41,8 +41,14 @@ def main(cfg):
     depth.eval()
 
     # Open camera or video file
-    cap = cv2.VideoCapture(0)  # or path to video
+    cap = cv2.VideoCapture(0)  # or path to video (VideoCapture("yourvideo.mp4"))
+
+    # Prepare video writer (saved output)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out_writer = None
+
     tracker = SimpleTracker()
+    
     while True:
         ret, frame = cap.read()
         if not ret:
