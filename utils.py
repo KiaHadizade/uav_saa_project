@@ -36,7 +36,7 @@ class DepthDataset(Dataset):
         mask = cv2.resize(mask, (self.inp, self.inp), interpolation=cv2.INTER_NEAREST)
         img = img.astype('float32')/255.0
         img = img.transpose(2,0,1)
-        return torch.from_numpy(img), torch.from_numpy(mask.astype('long'))
+        return torch.from_numpy(img).float(), torch.from_numpy(mask).long()
 
 def aggregate_mask_prediction(pred_probs, method='mean'):
     """
