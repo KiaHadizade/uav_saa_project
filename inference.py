@@ -8,20 +8,6 @@ from depth_unet import UNetSmall
 from utils import center_crop_around_bbox, aggregate_mask_prediction, visualize_overlay
 from tracker_kalman import SimpleTracker
 
-# helper (we reuse small crop fn here)
-def center_crop_around_bbox(img, bbox, out_size=320):
-    h,w = img.shape[:2]
-    x1,y1,x2,y2 = bbox
-    cx = (x1+x2)//2; cy = (y1+y2)//2
-    half = out_size//2
-    left = cx-half; top = cy-half; right = cx+half; bottom = cy+half
-    pad_left = max(0, -left); pad_top = max(0, -top)
-    pad_right = max(0, right-w); pad_bottom = max(0, bottom-h)
-    img_p = cv2.copyMakeBorder(img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_REFLECT)
-    left += pad_left; top += pad_top
-    crop = img_p[top:top+out_size, left:left+out_size]
-    return crop
-
 def preprocess_crop(crop, size=320):
     img = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB).astype('float32')/255.0
     img = cv2.resize(img, (size, size))
