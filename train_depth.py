@@ -42,6 +42,9 @@ def main(cfg):
     val_ds = torch.utils.data.Subset(ds, list(range(n-nval, n)))
     train_loader = DataLoader(train_ds, batch_size=cfg['train']['batch_size'], shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_ds, batch_size=cfg['train']['batch_size'], shuffle=False, num_workers=4, pin_memory=True)
+    
+    cfg['train']['lr'] = float(cfg['train']['lr'])
+    cfg['train']['weight_decay'] = float(cfg['train']['weight_decay'])
 
     model = UNetSmall(n_classes=cfg['model']['n_classes'], base=cfg['model']['base_ch']).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg['train']['lr'], weight_decay=cfg['train']['weight_decay'])
