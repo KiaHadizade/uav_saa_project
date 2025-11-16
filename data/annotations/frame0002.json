@@ -1,0 +1,9 @@
+{
+  "image_name": "frame0002.jpg",
+  "objects": [
+    {
+        "bbox": [300, 80, 360, 160],
+        "distance_m": 620
+    }
+  ]
+}
