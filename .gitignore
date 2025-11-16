@@ -2,3 +2,4 @@
 /checkpoints
 test.py
 yolov8n.pt
+output_processed.mp4
