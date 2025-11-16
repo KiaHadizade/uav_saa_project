@@ -59,3 +59,35 @@ def visualize_overlay(frame, boxes, track_ids, depth_classes):
         cv2.putText(frame, f"ID:{tid} Dclass:{cls}", (x1, max(10,y1-6)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 1, cv2.LINE_AA)
     return frame
+
+def center_crop_around_bbox(img, bbox, out_size=320):
+    """
+    Crops a square region of size out_size x out_size around the center of bbox.
+    If bbox is near image boundary, padding is automatically applied.
+    """
+    h, w = img.shape[:2]
+    x1, y1, x2, y2 = bbox
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    half = out_size // 2
+
+    left = cx - half
+    top = cy - half
+    right = cx + half
+    bottom = cy + half
+
+    # padding if crop exceeds boundaries
+    pad_left = max(0, -left)
+    pad_top = max(0, -top)
+    pad_right = max(0, right - w)
+    pad_bottom = max(0, bottom - h)
+
+    img_padded = cv2.copyMakeBorder(
+        img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_REFLECT
+    )
+
+    left += pad_left
+    top += pad_top
+
+    crop = img_padded[top:top + out_size, left:left + out_size]
+    return crop
