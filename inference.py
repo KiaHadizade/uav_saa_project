@@ -22,18 +22,25 @@ def center_crop_around_bbox(img, bbox, out_size=320):
     crop = img_p[top:top+out_size, left:left+out_size]
     return crop
 
-def preprocess_crop(crop):
+def preprocess_crop(crop, size=320):
     img = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB).astype('float32')/255.0
-    img = cv2.resize(img, (320,320))
+    img = cv2.resize(img, (size, size))
     img = img.transpose(2,0,1)
     return torch.from_numpy(img).unsqueeze(0)
 
 def main(cfg):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    det_model = YOLO('yolov8n.pt')  # change to your detector weights if trained
-    depth = UNetSmall(n_classes=cfg['model']['n_classes'], base=cfg['model']['base_ch']).to(device)
+    det_model = YOLO('yolov8n.pt')  # Load detector (change to your detector weights if trained)
+
+    # Load depth model
+    depth = UNetSmall(
+        n_classes=cfg['model']['n_classes'],
+        base=cfg['model']['base_ch']
+    ).to(device)
     depth.load_state_dict(torch.load('checkpoints/depth_best.pth', map_location=device))
     depth.eval()
+
+    # Open camera or video file
     cap = cv2.VideoCapture(0)  # or path to video
     tracker = SimpleTracker()
     while True:
