@@ -38,7 +38,9 @@ def main(cfg):
     tracker = SimpleTracker()
     while True:
         ret, frame = cap.read()
-        if not ret: break
+        if not ret:
+            print("Frame not received. Exiting...")
+            break
         # detection
         results = det_model.predict(frame, imgsz=640, conf=0.25, verbose=False)[0]
         boxes = []
@@ -72,7 +74,13 @@ def main(cfg):
             vis_classes = [4]*len(tbboxes)
         out = visualize_overlay(frame, tbboxes, tids, vis_classes)
         cv2.imshow("SAA", out)
+        # Exit condition with ESC
         if cv2.waitKey(1) & 0xFF == 27:
+            print("ESC pressed. Exiting...")
+            break
+        # Exit condition when the window is closed
+        if cv2.getWindowProperty("SAA", cv2.WND_PROP_VISIBLE) < 1:
+            print("Window closed. Exiting loop...")
             break
     cap.release(); cv2.destroyAllWindows()
 
