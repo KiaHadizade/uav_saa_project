@@ -49,6 +49,9 @@ def main(cfg):
 
     tracker = SimpleTracker()
 
+    fps = 0
+    last_time = time.time()
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -59,6 +62,8 @@ def main(cfg):
         if out_writer is None:
             h, w = frame.shape[:2]
             out_writer = cv2.VideoWriter("output_processed.mp4", fourcc, 30, (w, h))
+
+        start = time.time()
 
         # YOLO detection
         results = det_model.predict(frame, imgsz=640, conf=0.3, verbose=False)[0]
@@ -101,6 +106,15 @@ def main(cfg):
         
         # Draw
         out_frame = visualize_overlay(frame.copy(), tracked_boxes, tids, vis_classes)
+
+        # FPS + Latency overlay
+        end = time.time()
+        latency_ms = (end - start) * 1000
+        fps = 1.0 / (end - last_time)
+        last_time = end
+
+        cv2.putText(out_frame, f"FPS: {fps:.1f}", (10, 25),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50,255,50), 2)
+        cv2.putText(out_frame, f"Latency: {latency_ms:.1f} ms", (10, 55),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (50,255,50), 2)
         
         # Save processed video
         out_writer.write(out_frame)
